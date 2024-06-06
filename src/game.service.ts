@@ -8,7 +8,7 @@ import {
   } from '@nestjs/common';
   import * as WebSocket from 'ws';
   import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
-  import { AppGateway } from './app.gateway';
+  import LumosService from './ckb-lib.service'
   
   @Injectable()
   export class GameClientService implements OnModuleInit, OnModuleDestroy {
@@ -33,15 +33,17 @@ import {
     }
 
     async racing(addr: string) {
-        console.log("Hello racer");
+        console.log("Hello racer", addr);
         this.connectToServer(addr)
     }
   
     private async startMessageSequence(userAddress: string) {
-        this.sendMessage({
-            code_hash: 'take_next_step',
-            "address": `0x${userAddress}`,
-        });
+      console.log(userAddress)
+        this.sendMessage(JSON.stringify({
+            "code_hash": '0xduangua',
+            "address": userAddress,
+            "step": 1,
+        }));
     }
   
   
@@ -53,9 +55,30 @@ import {
         console.log('WebSocket connected');
         this.startMessageSequence(userAddress);
       });
-  
-      this.wsClient.on('message1', async (data) => {
+
+      this.wsClient.on('message', async (data) => {
         // TODO: win thì gọi ckb để submit
+        console.log('received: ', data)
+        try {
+          // Convert buffer to string
+          const message = data.toString();
+  
+          // Parse the string to JSON
+          const jsonData = JSON.parse(message);
+  
+          console.log('Received:', jsonData);
+          const a = await this.parseConfirmedTransaction(data)
+          console.log('aaa: ', a.ret_value)
+          if (a.ret_value == 0) {
+            await LumosService.buildMessageTx('b won')
+          } else {
+            await LumosService.buildMessageTx('a won')
+          }
+  
+          // TODO: Call ckb to submit if needed
+      } catch (error) {
+          console.error('Failed to parse message:', error);
+      }
       });
   
       this.wsClient.on('error', (error) => {
@@ -76,7 +99,7 @@ import {
       }
     }
   
-    private async parseConfirmedTransaction(data: any): Promise<ConfirmTx> {
+    private async parseConfirmedTransaction(data: any): Promise<DuanguaTx> {
       // console.log('Received message:', data.toString());
       // TODO(rameight): parse msg from ConfirmTransaction
       const svmConfirmedTransaction: SVMConfirmedTransaction = JSON.parse(data);
@@ -85,16 +108,15 @@ import {
       }
   
       switch (svmConfirmedTransaction.code_hash) {
-        case "0xtransfer":
+        case "0xduangua":
           const retVal = svmConfirmedTransaction.ret_value!;
-          const parsedRetVal = this.parseTransferRetVal(retVal);
+          // const parsedRetVal = this.parseTransferRetVal(retVal);
           // const tx = await this.cacheManager.get(`${svmConfirmedTransaction.tx_hash}`)
           // console.log(tx, parsedRetVal);
           return {
             hash: svmConfirmedTransaction.tx_hash,
             status: svmConfirmedTransaction.status,
-            from_value: parsedRetVal.fromVal,
-            to_value: parsedRetVal.toVal,
+            ret_value: retVal['U24'],
           }
         default:
           throw new Error("unknown code hash for parsing confirmed transaction");

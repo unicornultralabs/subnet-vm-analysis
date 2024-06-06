@@ -23,11 +23,8 @@ export class AppGateway
 {
   private readonly logger = new Logger(AppGateway.name);
 
-  constructor(
-    private readonly gameService: GameClientService,
-  ) {
-  }
-  
+  constructor(private readonly gameService: GameClientService) {}
+
   @WebSocketServer() io: Server;
 
   afterInit() {
@@ -49,9 +46,9 @@ export class AppGateway
   handleMessage(client: any, data: any) {
     this.logger.log(`Message received from client id: ${client.id}`);
     this.logger.debug(`Payload: ${data}`);
+    const parsedData = JSON.parse(data);
+    this.gameService.racing(parsedData.userAddress);
 
-    this.gameService.racing(data.userAddress)
-    
     return {
       event: 'pong',
       data: 'Wrong data that will make the test fail',

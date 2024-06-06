@@ -40,3 +40,9 @@ interface ConfirmTx {
     from_value?: number; //nullable, giá trị của from sau khi success
     to_value?: number; // nullable, giá trị của to sau khi success
 }
+
+interface DuanguaTx {
+    hash: string;
+    status: boolean; // tx success hay k, trường hợp fail thì retry
+    ret_value: any;
+}
