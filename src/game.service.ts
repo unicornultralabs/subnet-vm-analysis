@@ -19,7 +19,7 @@ import {
       @Inject(CACHE_MANAGER) private cacheManager: Cache,
       private readonly appGateway: AppGateway,
     ) {
-      this.id = 0;
+      this.id = 1;
     }
   
     async onModuleInit() {
@@ -32,6 +32,11 @@ import {
       this.wsClient.close();
       this.cacheManager.reset();
     }
+
+    async racing(addr: string) {
+        console.log("Hello racer");
+        this.connectToServer(addr)
+    }
   
     private async startMessageSequence(userAddress: string) {
         this.sendMessage({
@@ -41,7 +46,7 @@ import {
     }
   
   
-    private connectToServer(userAddress: string) {
+    connectToServer(userAddress: string) {
       const serverUrl = process.env.WEBSOCKET;
       this.wsClient = new WebSocket(serverUrl);
   
@@ -50,7 +55,7 @@ import {
         this.startMessageSequence(userAddress);
       });
   
-      this.wsClient.on('message', async (data) => {
+      this.wsClient.on('message1', async (data) => {
         // TODO: win thì gọi ckb để submit
       });
   
