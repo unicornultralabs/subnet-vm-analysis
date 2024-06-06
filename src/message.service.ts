@@ -9,6 +9,7 @@ import {
 import * as WebSocket from 'ws';
 import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
 import { AppGateway } from './app.gateway';
+import { GameService } from './game.service';
 
 @Injectable()
 export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
@@ -20,6 +21,7 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private readonly appGateway: AppGateway,
+    private readonly gameService: GameService,
   ) {
     this.id = 0;
   }
@@ -110,6 +112,10 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
       this.startMessageSequence();
     });
 
+    this.wsClient.on('race', () => {
+      this.gameService.racing()
+    });
+    
     this.wsClient.on('message', async (data) => {
       const parsedValue = await this.parseConfirmedTransaction(data);
       const tx = await this.cacheManager.get<{from: string, to: string}>(`${parsedValue.hash}`)
