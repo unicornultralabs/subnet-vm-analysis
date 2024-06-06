@@ -6,6 +6,7 @@ import { RedisClientOptions } from 'redis';
 import { redisStore } from 'cache-manager-redis-store';
 import { WebSocketClientService } from './message.service';
 import { AppGateway } from './app.gateway';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -16,6 +17,10 @@ import { AppGateway } from './app.gateway';
           ttl: Number.MAX_SAFE_INTEGER,
         };
       },
+    }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
     }),
   ],
   controllers: [AppController],

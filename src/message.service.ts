@@ -54,7 +54,6 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
             amount: 1,
           },
         );
-        // console.log(message);
         this.sendMessage(message);
         await this.cacheManager.set(
           `0x${this.id}`,
@@ -79,7 +78,7 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
         // console.log(`Transaction 0x${this.id}: ${from} sends 1 to ${to}`);
         // console.log(`Balance of 0x${from}: ${balances[`0x${from}`]}`);
         // console.log(`Balance of 0x${to}: ${balances[`0x${to}`]}`);
-        await new Promise((resolve) => setTimeout(resolve, 500)); // delay to prevent spam
+        // await new Promise((resolve) => setTimeout(resolve, 500)); // delay to prevent spam
         this.id++;
         to--;
       }
@@ -103,7 +102,7 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
   }
 
   private connectToServer() {
-    const serverUrl = 'wss://zfrcm7lg-9001.asse.devtunnels.ms';
+    const serverUrl = process.env.WEBSOCKET;
     this.wsClient = new WebSocket(serverUrl);
 
     this.wsClient.on('open', async () => {
