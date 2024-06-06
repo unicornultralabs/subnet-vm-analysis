@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 // src/websocket-client.service.ts
 import {
   Injectable,
@@ -92,7 +93,7 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
   }
 
   private connectToServer() {
-    const serverUrl = 'ws://127.0.0.1:9001';
+    const serverUrl = 'wss://m7c36pjn-9001.asse.devtunnels.ms';
     this.wsClient = new WebSocket(serverUrl);
 
     this.wsClient.on('open', async () => {
@@ -101,7 +102,7 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.wsClient.on('message', async (data) => {
-      console.log('Received message:', data.toString());
+      this.parseConfirmedTransaction(data);
       this.appGateway.sendToAll(data.toString());
       await this.cacheManager.set(
         `message_from_server`,
@@ -126,6 +127,44 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
       this.wsClient.send(message);
     } else {
       console.log('WebSocket is not open. Message not sent.');
+    }
+  }
+
+  private parseConfirmedTransaction(data: any): ConfirmTx {
+    console.log('Received message:', data.toString());
+    // TODO(rameight): parse msg from ConfirmTransaction
+    const svmConfirmedTransaction: SVMConfirmedTransaction = data;
+    console.log(svmConfirmedTransaction);
+
+    if (!svmConfirmedTransaction.status) {
+      throw new Error("tx execution failed");
+    }
+
+    switch (svmConfirmedTransaction.code_hash) {
+      case "0xtransfer":
+        const retVal = svmConfirmedTransaction.ret_val!;
+        const parsedRetVal = this.parseTransferRetVal(retVal);
+        return {
+          hash: svmConfirmedTransaction.tx_hash,
+          status: svmConfirmedTransaction.status,
+          from_value: parsedRetVal.fromVal,
+          to_value: parsedRetVal.toVal,
+        }
+      default:
+        throw new Error("unknown code hash for parsing confirmed transaction");
+    }
+  }
+
+  private parseTransferRetVal(retVal: SVMPrimitives) {
+    switch (retVal.type) {
+      case "Tup":
+        const tup = retVal.value;
+        return {
+          fromVal: tup[0].value as number,
+          toVal: tup[1].value as number
+        }
+      default:
+        throw new Error("unexpected return value of transfer");
     }
   }
 }
