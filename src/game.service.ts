@@ -17,7 +17,6 @@ import {
   
     constructor(
       @Inject(CACHE_MANAGER) private cacheManager: Cache,
-      private readonly appGateway: AppGateway,
     ) {
       this.id = 1;
     }

@@ -113,7 +113,7 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.wsClient.on('race', (data: {userAddress: string}) => {
-      console.log(data)
+      console.log(data.userAddress)
       this.gameService.racing(data.userAddress)
     });
     

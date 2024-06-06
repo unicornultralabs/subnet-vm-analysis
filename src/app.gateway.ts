@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   OnGatewayConnection,
   OnGatewayDisconnect,
@@ -9,6 +9,7 @@ import {
 } from '@nestjs/websockets';
 
 import { Server } from 'socket.io';
+import { GameClientService } from './game.service';
 
 @WebSocketGateway({
   cors: {
@@ -16,11 +17,17 @@ import { Server } from 'socket.io';
     credentials: false,
   },
 })
+@Injectable()
 export class AppGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
   private readonly logger = new Logger(AppGateway.name);
 
+  constructor(
+    private readonly gameService: GameClientService,
+  ) {
+  }
+  
   @WebSocketServer() io: Server;
 
   afterInit() {
@@ -42,6 +49,9 @@ export class AppGateway
   handleMessage(client: any, data: any) {
     this.logger.log(`Message received from client id: ${client.id}`);
     this.logger.debug(`Payload: ${data}`);
+
+    this.gameService.racing(data.userAddress)
+    
     return {
       event: 'pong',
       data: 'Wrong data that will make the test fail',
