@@ -24,8 +24,9 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
     this.id = 0;
   }
 
-  onModuleInit() {
-    console.log('initializing...');
+  async onModuleInit() {
+    console.log('initializing... wait 10 secs');
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // delay to prevent spam
     this.connectToServer();
   }
 
@@ -44,16 +45,24 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
     }
     while (from >= 1) {
       while (to >= 1) {
-        const message = JSON.stringify([
+        const message = JSON.stringify(
           {
-            hash: `0x${this.id}`,
+            code_hash: '0xtransfer',
+            tx_hash: `0x${this.id}`,
             from: `0x${from.toString()}`,
             to: `0x${to.toString()}`,
             amount: 1,
           },
-        ]);
-        console.log(message);
+        );
+        // console.log(message);
         this.sendMessage(message);
+        await this.cacheManager.set(
+          `0x${this.id}`,
+          {
+            from: `0x${from.toString()}`,
+            to: `0x${to.toString()}`,
+          }
+        )
         await this.cacheManager.set(
           `pre-${this.id.toString()}`,
           JSON.parse(message),
@@ -67,10 +76,10 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
           balances[`0x${to.toString()}`] += 1; // Add amount to receiver
         }
 
-        console.log(`Transaction 0x${this.id}: ${from} sends 1 to ${to}`);
-        console.log(`Balance of 0x${from}: ${balances[`0x${from}`]}`);
-        console.log(`Balance of 0x${to}: ${balances[`0x${to}`]}`);
-        // await new Promise((resolve) => setTimeout(resolve, 1000)); // delay to prevent spam
+        // console.log(`Transaction 0x${this.id}: ${from} sends 1 to ${to}`);
+        // console.log(`Balance of 0x${from}: ${balances[`0x${from}`]}`);
+        // console.log(`Balance of 0x${to}: ${balances[`0x${to}`]}`);
+        await new Promise((resolve) => setTimeout(resolve, 500)); // delay to prevent spam
         this.id++;
         to--;
       }
@@ -90,10 +99,11 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
 
     const tps = this.messageTimes.length; // Number of messages in the last second
     console.log(`Current TPS: ${tps}`);
+    return tps;
   }
 
   private connectToServer() {
-    const serverUrl = 'wss://m7c36pjn-9001.asse.devtunnels.ms';
+    const serverUrl = 'wss://zfrcm7lg-9001.asse.devtunnels.ms';
     this.wsClient = new WebSocket(serverUrl);
 
     this.wsClient.on('open', async () => {
@@ -102,14 +112,23 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.wsClient.on('message', async (data) => {
-      this.parseConfirmedTransaction(data);
-      this.appGateway.sendToAll(data.toString());
-      await this.cacheManager.set(
-        `message_from_server`,
-        data,
-        Number.MAX_SAFE_INTEGER,
-      );
-      this.recordMessageTime(); // Call to update timestamps and log TPS
+      const parsedValue = await this.parseConfirmedTransaction(data);
+      const tx = await this.cacheManager.get<{from: string, to: string}>(`${parsedValue.hash}`)
+      console.log('hahaha: ', tx, parsedValue);
+      const tps = this.recordMessageTime(); // Call to update timestamps and log TPS
+      await this.appGateway.sendToAll({
+        from_value: parsedValue.from_value,
+        to_value: parsedValue.to_value,
+        from_address: tx.from,
+        to_address: tx.to,
+        tps
+      })
+      // console.log(parsedValue)
+      // await this.cacheManager.set(
+      //   `message_from_server`,
+      //   data,
+      //   Number.MAX_SAFE_INTEGER,
+      // );
     });
 
     this.wsClient.on('error', (error) => {
@@ -130,20 +149,20 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private parseConfirmedTransaction(data: any): ConfirmTx {
-    console.log('Received message:', data.toString());
+  private async parseConfirmedTransaction(data: any): Promise<ConfirmTx> {
+    // console.log('Received message:', data.toString());
     // TODO(rameight): parse msg from ConfirmTransaction
-    const svmConfirmedTransaction: SVMConfirmedTransaction = data;
-    console.log(svmConfirmedTransaction);
-
+    const svmConfirmedTransaction: SVMConfirmedTransaction = JSON.parse(data);
     if (!svmConfirmedTransaction.status) {
       throw new Error("tx execution failed");
     }
 
     switch (svmConfirmedTransaction.code_hash) {
       case "0xtransfer":
-        const retVal = svmConfirmedTransaction.ret_val!;
+        const retVal = svmConfirmedTransaction.ret_value!;
         const parsedRetVal = this.parseTransferRetVal(retVal);
+        // const tx = await this.cacheManager.get(`${svmConfirmedTransaction.tx_hash}`)
+        // console.log(tx, parsedRetVal);
         return {
           hash: svmConfirmedTransaction.tx_hash,
           status: svmConfirmedTransaction.status,
@@ -156,15 +175,22 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
   }
 
   private parseTransferRetVal(retVal: SVMPrimitives) {
-    switch (retVal.type) {
-      case "Tup":
-        const tup = retVal.value;
-        return {
-          fromVal: tup[0].value as number,
-          toVal: tup[1].value as number
-        }
-      default:
-        throw new Error("unexpected return value of transfer");
+    console.log('ret val: ,', retVal['Tup'][0])
+    if (retVal['Tup']) {
+      return {
+        fromVal: retVal['Tup'][0].U24 as number,
+        toVal: retVal['Tup'][1].U24 as number
+      }
     }
+    // switch (retVal.type) {
+    //   case "Tup":
+    //     const tup = retVal.value;
+    //     return {
+    //       fromVal: tup[0].value as number,
+    //       toVal: tup[1].value as number
+    //     }
+    //   default:
+    //     throw new Error("unexpected return value of transfer");
+    // }
   }
 }

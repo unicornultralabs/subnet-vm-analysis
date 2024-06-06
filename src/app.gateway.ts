@@ -38,7 +38,7 @@ export class AppGateway
     this.logger.log(`Cliend id:${client.id} disconnected`);
   }
 
-  @SubscribeMessage('ping')
+  @SubscribeMessage('message')
   handleMessage(client: any, data: any) {
     this.logger.log(`Message received from client id: ${client.id}`);
     this.logger.debug(`Payload: ${data}`);
@@ -47,7 +47,7 @@ export class AppGateway
       data: 'Wrong data that will make the test fail',
     };
   }
-  sendToAll(message: string) {
+  sendToAll(message: any) {
     this.io.emit('message', message);
   }
 }

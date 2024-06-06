@@ -3,7 +3,7 @@ interface SVMConfirmedTransaction {
     tx_hash: string;
     code_hash: string;
     status: boolean; // tx success hay k, trường hợp fail thì retry
-    ret_val?: SVMPrimitives,
+    ret_value?: SVMPrimitives,
 }
 
 // Define the types for the enum variants
