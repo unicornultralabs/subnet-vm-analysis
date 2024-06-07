@@ -29,7 +29,7 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     console.log('initializing... wait 10 secs');
     await new Promise((resolve) => setTimeout(resolve, 1000)); // delay to prevent spam
-    // this.connectToServer();
+    this.connectToServer();
   }
 
   onModuleDestroy() {
@@ -47,15 +47,15 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
     }
     while (from >= 1) {
       while (to >= 1) {
-        const txBody: TxBody =
+        const txBody =
         {
-          code_hash: '0xtransfer',
           tx_hash: `0x${this.id}`,
+          code_hash: '0xtransfer',
           objs: [
             `0x${from.toString()}`,
             `0x${to.toString()}`,
           ],
-          args: [{ type: "U24", value: 123 }],
+          args: [{ "U24": 1 }],
         }
 
         this.sendMessage(JSON.stringify(txBody));
@@ -120,6 +120,7 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.wsClient.on('message', async (data) => {
+      console.log(data)
       const parsedValue = await this.parseConfirmedTransaction(data);
       const tx = await this.cacheManager.get<{ from: string, to: string }>(`${parsedValue.hash}`)
       console.log('hahaha: ', tx, parsedValue);
