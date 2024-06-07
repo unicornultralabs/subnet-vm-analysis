@@ -16,6 +16,7 @@ import { GameClientService } from './game.service';
         return {
           store: redisStore as unknown as CacheStore,
           ttl: Number.MAX_SAFE_INTEGER,
+          password:'dpn',
         };
       },
     }),

@@ -47,16 +47,18 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
     }
     while (from >= 1) {
       while (to >= 1) {
-        const message = JSON.stringify(
-          {
-            code_hash: '0xtransfer',
-            tx_hash: `0x${this.id}`,
-            from: `0x${from.toString()}`,
-            to: `0x${to.toString()}`,
-            amount: 1,
-          },
-        );
-        this.sendMessage(message);
+        const txBody: TxBody =
+        {
+          code_hash: '0xtransfer',
+          tx_hash: `0x${this.id}`,
+          objs: [
+            `0x${from.toString()}`,
+            `0x${to.toString()}`,
+          ],
+          args: [{ type: "U24", value: 123 }],
+        }
+
+        this.sendMessage(JSON.stringify(txBody));
         await this.cacheManager.set(
           `0x${this.id}`,
           {
@@ -66,7 +68,7 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
         )
         await this.cacheManager.set(
           `pre-${this.id.toString()}`,
-          JSON.parse(message),
+          txBody,
           Number.MAX_SAFE_INTEGER,
         );
         // Update balances
@@ -112,14 +114,14 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
       this.startMessageSequence();
     });
 
-    this.wsClient.on('race', (data: {userAddress: string}) => {
+    this.wsClient.on('race', (data: { userAddress: string }) => {
       console.log(data.userAddress)
       this.gameService.racing(data.userAddress)
     });
-    
+
     this.wsClient.on('message', async (data) => {
       const parsedValue = await this.parseConfirmedTransaction(data);
-      const tx = await this.cacheManager.get<{from: string, to: string}>(`${parsedValue.hash}`)
+      const tx = await this.cacheManager.get<{ from: string, to: string }>(`${parsedValue.hash}`)
       console.log('hahaha: ', tx, parsedValue);
       const tps = this.recordMessageTime(); // Call to update timestamps and log TPS
       await this.appGateway.sendToAll({
@@ -147,7 +149,7 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  sendMessage(message: any) {
+  sendMessage(message: string) {
     if (this.wsClient.readyState === WebSocket.OPEN) {
       this.wsClient.send(message);
     } else {
