@@ -70,12 +70,17 @@ import { Server } from 'socket.io';
           "0x1000002"
         ],
         args: [
-          {"U24": userAddress === '0x1000001' ? 0 : 1}, // 0 la a, 1 la b
+          {"U24": userAddress === '0x1000001' ? 1 : 2}, // 0 la a, 1 la b
           {"U24": 6}
         ]
 
       }
-        this.sendMessage(JSON.stringify(message));
+      const tx: SubmitTx = {
+        SubmitTx: {
+          tx_body: message
+        }
+      }
+        this.sendMessage(JSON.stringify(tx));
     }
   
     sendToAll(message: any) {
@@ -99,20 +104,29 @@ import { Server } from 'socket.io';
         try {
           // Convert buffer to string
           const message = data.toString();
-  
           // Parse the string to JSON
           const jsonData = JSON.parse(message);
   
-          console.log('Received:', jsonData);
           const a = await this.parseConfirmedTransaction(data)
           this.sendToAll({
             code_hash: 'explorer',
             data: a
           })
-          console.log('aaa: ', a.ret_value[2]['U24'])
           // const blablabla = await LumosService.readOnChainMessage('0x7ec173c71b90ea15aabf1fe9725e0566b69f91aa74385a802481d1ac192d43af');
           // console.log('blablabla: ', blablabla)
           if (a.ret_value[2]['U24'] == 1) {
+            const txHash = await LumosService.buildMessageTx('racer 1 won')
+            await this.sendMessage(txHash)
+            await this.cacheManager.set(txHash, 0, Number.MAX_SAFE_INTEGER)
+            await this.sendToAll({
+              code_hash: '0xduangua',
+              win: 'racer1',
+              txHash,
+            })
+            await this.sendMessage(JSON.stringify({
+              ReallocateMemory: {}
+            }))
+          } else if(a.ret_value[2]['U24'] == 2) {
             const txHash = await LumosService.buildMessageTx('racer 2 won')
             await this.sendMessage(txHash)
             await this.cacheManager.set(txHash, 0, Number.MAX_SAFE_INTEGER)
@@ -121,16 +135,9 @@ import { Server } from 'socket.io';
               win: 'racer2',
               txHash,
             })
-          } else if(a.ret_value[2]['U24'] == 2) {
-            const txHash = await LumosService.buildMessageTx('racer 1 won')
-            await this.sendMessage(txHash)
-            await this.cacheManager.set(txHash, 0, Number.MAX_SAFE_INTEGER)
-            const appGateway = new AppGateway(this);
-            await appGateway.sendToAll({
-              code_hash: '0xduangua',
-              win: 'racer1',
-              txHash,
-            })
+            await this.sendMessage(JSON.stringify({
+              ReallocateMemory: {}
+            }))
           }
   
           // TODO: Call ckb to submit if needed
