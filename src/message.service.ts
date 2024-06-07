@@ -32,6 +32,10 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
     this.connectToServer();
   }
 
+  async reInit() {
+    this.connectToServer();
+  }
+
   onModuleDestroy() {
     this.wsClient.close();
     this.cacheManager.reset();
@@ -58,7 +62,12 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
           args: [{ "U24": 1 }],
         }
 
-        this.sendMessage(JSON.stringify(txBody));
+        const submitTx: SubmitTx = {
+          SubmitTx: {
+            tx_body: txBody
+          },
+        }
+        this.sendMessage(JSON.stringify(submitTx));
         await this.cacheManager.set(
           `0x${this.id}`,
           {
@@ -89,6 +98,9 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
       from--;
       to = from - 1;
     }
+    this.sendMessage(JSON.stringify({
+      ReallocateMemory: {}
+    }))
   }
 
   private recordMessageTime() {
@@ -120,15 +132,12 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.wsClient.on('message', async (data) => {
-      
-      console.log(data)
       const parsedValue = await this.parseConfirmedTransaction(data);
       await this.appGateway.sendToAll({
         code_hash: 'explorer',
         data: parsedValue,
       })
       const tx = await this.cacheManager.get<{ from: string, to: string }>(`${parsedValue.hash}`)
-      console.log('hahaha: ', tx, parsedValue);
       const tps = this.recordMessageTime(); // Call to update timestamps and log TPS
       await this.appGateway.sendToAll({
         code_hash: '0xtransfer',
@@ -167,7 +176,7 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
   private async parseConfirmedTransaction(data: any): Promise<ConfirmTx> {
     // console.log('Received message:', data.toString());
     // TODO(rameight): parse msg from ConfirmTransaction
-    const svmConfirmedTransaction: SVMConfirmedTransaction = JSON.parse(data);
+    const svmConfirmedTransaction: SVMConfirmedTransaction = JSON.parse(data.toString());
     if (!svmConfirmedTransaction.status) {
       throw new Error("tx execution failed");
     }
