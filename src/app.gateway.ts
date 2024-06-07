@@ -55,6 +55,7 @@ export class AppGateway
     };
   }
   sendToAll(message: any) {
+    console.log(JSON.stringify(message));
     this.io.emit('message', message);
   }
 }

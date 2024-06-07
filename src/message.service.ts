@@ -29,7 +29,7 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     console.log('initializing... wait 10 secs');
     await new Promise((resolve) => setTimeout(resolve, 1000)); // delay to prevent spam
-    // this.connectToServer();
+    this.connectToServer();
   }
 
   onModuleDestroy() {
@@ -38,7 +38,7 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async startMessageSequence() {
-    let from = 500;
+    let from = 100;
     let to = from - 1;
 
     const balances = {};
@@ -47,16 +47,18 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
     }
     while (from >= 1) {
       while (to >= 1) {
-        const message = JSON.stringify(
-          {
-            code_hash: '0xtransfer',
-            tx_hash: `0x${this.id}`,
-            from: `0x${from.toString()}`,
-            to: `0x${to.toString()}`,
-            amount: 1,
-          },
-        );
-        this.sendMessage(message);
+        const txBody: TxBody =
+        {
+          tx_hash: `0x${this.id}`,
+          code_hash: '0xtransfer',
+          objs: [
+            `0x${from.toString()}`,
+            `0x${to.toString()}`,
+          ],
+          args: [{ "U24": 1 }],
+        }
+
+        this.sendMessage(JSON.stringify(txBody));
         await this.cacheManager.set(
           `0x${this.id}`,
           {
@@ -66,7 +68,7 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
         )
         await this.cacheManager.set(
           `pre-${this.id.toString()}`,
-          JSON.parse(message),
+          txBody,
           Number.MAX_SAFE_INTEGER,
         );
         // Update balances
@@ -112,17 +114,24 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
       this.startMessageSequence();
     });
 
-    this.wsClient.on('race', (data: {userAddress: string}) => {
+    this.wsClient.on('race', (data: { userAddress: string }) => {
       console.log(data.userAddress)
       this.gameService.racing(data.userAddress)
     });
-    
+
     this.wsClient.on('message', async (data) => {
+      
+      console.log(data)
       const parsedValue = await this.parseConfirmedTransaction(data);
-      const tx = await this.cacheManager.get<{from: string, to: string}>(`${parsedValue.hash}`)
+      await this.appGateway.sendToAll({
+        code_hash: 'explorer',
+        data: parsedValue,
+      })
+      const tx = await this.cacheManager.get<{ from: string, to: string }>(`${parsedValue.hash}`)
       console.log('hahaha: ', tx, parsedValue);
       const tps = this.recordMessageTime(); // Call to update timestamps and log TPS
       await this.appGateway.sendToAll({
+        code_hash: '0xtransfer',
         from_value: parsedValue.from_value,
         to_value: parsedValue.to_value,
         from_address: tx.from,
@@ -147,7 +156,7 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  sendMessage(message: any) {
+  sendMessage(message: string) {
     if (this.wsClient.readyState === WebSocket.OPEN) {
       this.wsClient.send(message);
     } else {

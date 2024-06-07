@@ -9,16 +9,39 @@ import {
   import * as WebSocket from 'ws';
   import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
   import LumosService from './ckb-lib.service'
+import { AppGateway } from './app.gateway';
+import { OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
+import { Server } from 'socket.io';
   
-  @Injectable()
-  export class GameClientService implements OnModuleInit, OnModuleDestroy {
+@WebSocketGateway({
+  cors: {
+    origin: '*',
+    credentials: false,
+  },
+})
+@Injectable()
+  export class GameClientService implements OnModuleInit, OnModuleDestroy, OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
     private wsClient: WebSocket;
     private id: number;
   
+
+    @WebSocketServer() io: Server;
+
     constructor(
       @Inject(CACHE_MANAGER) private cacheManager: Cache,
     ) {
-      this.id = 1;
+      this.id = Number.MAX_SAFE_INTEGER;
+    }
+    handleDisconnect(client: any) {
+      // throw new Error('Method not implemented.');
+    }
+    handleConnection(client: any, ...args: any[]) {
+      const { sockets } = this.io.sockets;
+      // throw new Error('Method not implemented.');
+    }
+    afterInit(server: any) {
+      // throw new Error('Method not implemented.');
+
     }
   
     async onModuleInit() {
@@ -39,13 +62,26 @@ import {
   
     private async startMessageSequence(userAddress: string) {
       console.log(userAddress)
-        this.sendMessage(JSON.stringify({
-            "code_hash": '0xduangua',
-            "address": userAddress,
-            "step": 1,
-        }));
+      const message: TxBody = {
+        tx_hash: `0x${this.id.toString()}`,
+        code_hash: `0xduangua`,
+        objs: [
+          "0x1000001",
+          "0x1000002"
+        ],
+        args: [
+          {"U24": userAddress === '0x1000001' ? 0 : 1}, // 0 la a, 1 la b
+          {"U24": 6}
+        ]
+
+      }
+        this.sendMessage(JSON.stringify(message));
     }
   
+    sendToAll(message: any) {
+      console.log(JSON.stringify(message));
+      this.io.emit('message', message);
+    }
   
     connectToServer(userAddress: string) {
       const serverUrl = process.env.WEBSOCKET;
@@ -59,6 +95,7 @@ import {
       this.wsClient.on('message', async (data) => {
         // TODO: win thì gọi ckb để submit
         console.log('received: ', data)
+
         try {
           // Convert buffer to string
           const message = data.toString();
@@ -68,19 +105,32 @@ import {
   
           console.log('Received:', jsonData);
           const a = await this.parseConfirmedTransaction(data)
-          console.log('aaa: ', a.ret_value)
-          if (a.ret_value == 1) {
-            const txHash = await LumosService.buildMessageTx('b won')
-            const result = await LumosService.readOnChainMessage('0xeaedefc431ad97c66234fd0a82b2f675c2e64b89e4d851f4cd798677c37b6aab');
+          this.sendToAll({
+            code_hash: 'explorer',
+            data: a
+          })
+          console.log('aaa: ', a.ret_value[2]['U24'])
+          // const blablabla = await LumosService.readOnChainMessage('0x7ec173c71b90ea15aabf1fe9725e0566b69f91aa74385a802481d1ac192d43af');
+          // console.log('blablabla: ', blablabla)
+          if (a.ret_value[2]['U24'] == 1) {
+            const txHash = await LumosService.buildMessageTx('racer 2 won')
             await this.sendMessage(txHash)
             await this.cacheManager.set(txHash, 0, Number.MAX_SAFE_INTEGER)
-            console.log('result: ', result)
-          } else {
-            const txHash = await LumosService.buildMessageTx('a won')
-            const result = await LumosService.readOnChainMessage('0xeaedefc431ad97c66234fd0a82b2f675c2e64b89e4d851f4cd798677c37b6aab');
-            await this.cacheManager.set(txHash, 0, Number.MAX_SAFE_INTEGER)
+            await this.sendToAll({
+              code_hash: '0xduangua',
+              win: 'racer2',
+              txHash,
+            })
+          } else if(a.ret_value[2]['U24'] == 2) {
+            const txHash = await LumosService.buildMessageTx('racer 1 won')
             await this.sendMessage(txHash)
-            console.log('result: ', result)
+            await this.cacheManager.set(txHash, 0, Number.MAX_SAFE_INTEGER)
+            const appGateway = new AppGateway(this);
+            await appGateway.sendToAll({
+              code_hash: '0xduangua',
+              win: 'racer1',
+              txHash,
+            })
           }
   
           // TODO: Call ckb to submit if needed
@@ -124,7 +174,7 @@ import {
           return {
             hash: svmConfirmedTransaction.tx_hash,
             status: svmConfirmedTransaction.status,
-            ret_value: retVal['U24'],
+            ret_value: retVal['Tup'],
           }
         default:
           throw new Error("unknown code hash for parsing confirmed transaction");

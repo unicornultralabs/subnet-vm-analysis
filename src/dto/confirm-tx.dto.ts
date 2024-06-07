@@ -8,8 +8,7 @@ interface SVMConfirmedTransaction {
 
 // Define the types for the enum variants
 interface U24 {
-    type: "U24";
-    value: number;
+    U24: number;
 }
 
 interface Tup {
