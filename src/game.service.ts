@@ -69,10 +69,18 @@ import {
           console.log('Received:', jsonData);
           const a = await this.parseConfirmedTransaction(data)
           console.log('aaa: ', a.ret_value)
-          if (a.ret_value == 0) {
-            await LumosService.buildMessageTx('b won')
+          if (a.ret_value == 1) {
+            const txHash = await LumosService.buildMessageTx('b won')
+            const result = await LumosService.readOnChainMessage('0xeaedefc431ad97c66234fd0a82b2f675c2e64b89e4d851f4cd798677c37b6aab');
+            await this.sendMessage(txHash)
+            await this.cacheManager.set(txHash, 0, Number.MAX_SAFE_INTEGER)
+            console.log('result: ', result)
           } else {
-            await LumosService.buildMessageTx('a won')
+            const txHash = await LumosService.buildMessageTx('a won')
+            const result = await LumosService.readOnChainMessage('0xeaedefc431ad97c66234fd0a82b2f675c2e64b89e4d851f4cd798677c37b6aab');
+            await this.cacheManager.set(txHash, 0, Number.MAX_SAFE_INTEGER)
+            await this.sendMessage(txHash)
+            console.log('result: ', result)
           }
   
           // TODO: Call ckb to submit if needed

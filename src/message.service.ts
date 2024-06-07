@@ -29,7 +29,7 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     console.log('initializing... wait 10 secs');
     await new Promise((resolve) => setTimeout(resolve, 1000)); // delay to prevent spam
-    this.connectToServer();
+    // this.connectToServer();
   }
 
   onModuleDestroy() {
