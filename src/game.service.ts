@@ -109,30 +109,28 @@ import { Server } from 'socket.io';
             code_hash: 'explorer',
             data: a
           })
-          console.log('aaa: ', a.ret_value)
-          if (a.ret_value[0] == 6) {
-            const txHash = await LumosService.buildMessageTx('a won')
-            const result = await LumosService.readOnChainMessage('0xeaedefc431ad97c66234fd0a82b2f675c2e64b89e4d851f4cd798677c37b6aab');
+          console.log('aaa: ', a.ret_value[2]['U24'])
+          // const blablabla = await LumosService.readOnChainMessage('0x7ec173c71b90ea15aabf1fe9725e0566b69f91aa74385a802481d1ac192d43af');
+          // console.log('blablabla: ', blablabla)
+          if (a.ret_value[2]['U24'] == 1) {
+            const txHash = await LumosService.buildMessageTx('racer 2 won')
             await this.sendMessage(txHash)
             await this.cacheManager.set(txHash, 0, Number.MAX_SAFE_INTEGER)
-            console.log('result: ', result)
             await this.sendToAll({
               code_hash: '0xduangua',
-              win: true,
+              win: 'racer2',
+              txHash,
             })
-            console.log('result: ', result)
-          } else if(a.ret_value[1] == 6) {
-            const txHash = await LumosService.buildMessageTx('b won')
-            const result = await LumosService.readOnChainMessage('0xeaedefc431ad97c66234fd0a82b2f675c2e64b89e4d851f4cd798677c37b6aab');
+          } else if(a.ret_value[2]['U24'] == 2) {
+            const txHash = await LumosService.buildMessageTx('racer 1 won')
             await this.sendMessage(txHash)
             await this.cacheManager.set(txHash, 0, Number.MAX_SAFE_INTEGER)
-            console.log('result: ', result)
             const appGateway = new AppGateway(this);
             await appGateway.sendToAll({
               code_hash: '0xduangua',
-              win: true,
+              win: 'racer1',
+              txHash,
             })
-            console.log('result: ', result)
           }
   
           // TODO: Call ckb to submit if needed
