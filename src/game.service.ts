@@ -10,11 +10,17 @@ import {
   import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
   import LumosService from './ckb-lib.service'
 import { AppGateway } from './app.gateway';
-import { WebSocketServer } from '@nestjs/websockets';
+import { OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server } from 'socket.io';
   
-  @Injectable()
-  export class GameClientService implements OnModuleInit, OnModuleDestroy {
+@WebSocketGateway({
+  cors: {
+    origin: '*',
+    credentials: false,
+  },
+})
+@Injectable()
+  export class GameClientService implements OnModuleInit, OnModuleDestroy, OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
     private wsClient: WebSocket;
     private id: number;
   
@@ -25,6 +31,17 @@ import { Server } from 'socket.io';
       @Inject(CACHE_MANAGER) private cacheManager: Cache,
     ) {
       this.id = Number.MAX_SAFE_INTEGER;
+    }
+    handleDisconnect(client: any) {
+      // throw new Error('Method not implemented.');
+    }
+    handleConnection(client: any, ...args: any[]) {
+      const { sockets } = this.io.sockets;
+      // throw new Error('Method not implemented.');
+    }
+    afterInit(server: any) {
+      // throw new Error('Method not implemented.');
+
     }
   
     async onModuleInit() {
