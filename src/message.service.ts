@@ -38,7 +38,7 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async startMessageSequence() {
-    let from = 500;
+    let from = 100;
     let to = from - 1;
 
     const balances = {};
@@ -47,7 +47,7 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
     }
     while (from >= 1) {
       while (to >= 1) {
-        const txBody =
+        const txBody: TxBody =
         {
           tx_hash: `0x${this.id}`,
           code_hash: '0xtransfer',
@@ -120,12 +120,18 @@ export class WebSocketClientService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.wsClient.on('message', async (data) => {
+      
       console.log(data)
       const parsedValue = await this.parseConfirmedTransaction(data);
+      await this.appGateway.sendToAll({
+        code_hash: 'explorer',
+        data: parsedValue,
+      })
       const tx = await this.cacheManager.get<{ from: string, to: string }>(`${parsedValue.hash}`)
       console.log('hahaha: ', tx, parsedValue);
       const tps = this.recordMessageTime(); // Call to update timestamps and log TPS
       await this.appGateway.sendToAll({
+        code_hash: '0xtransfer',
         from_value: parsedValue.from_value,
         to_value: parsedValue.to_value,
         from_address: tx.from,
