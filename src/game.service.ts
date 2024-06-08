@@ -81,6 +81,14 @@ import { Server } from 'socket.io';
         }
       }
         this.sendMessage(JSON.stringify(tx));
+        const proof = await this.cacheManager.get<any[]>(`0xduangua-${userAddress === '0x1000001' ? 1 : 2}}`)
+        console.log('proof: ', proof)
+        if (!proof) {
+          await this.cacheManager.set(`0xduangua-${userAddress === '0x1000001' ? 1 : 2}`, [new Date().getTime()])
+        } else {
+          const tempt = proof.push(new Date().getTime())
+          await this.cacheManager.set(`0xduangua-${userAddress === '0x1000001' ? 1 : 2}`, proof)
+        }
     }
   
     sendToAll(message: any) {
@@ -115,7 +123,9 @@ import { Server } from 'socket.io';
           // const blablabla = await LumosService.readOnChainMessage('0x7ec173c71b90ea15aabf1fe9725e0566b69f91aa74385a802481d1ac192d43af');
           // console.log('blablabla: ', blablabla)
           if (a.ret_value[2]['U24'] == 1) {
-            const txHash = await LumosService.buildMessageTx('racer 1 won')
+            const stepProof = await this.cacheManager.get('0xduangua-1')
+            console.log(stepProof)
+            const txHash = await LumosService.buildMessageTx(JSON.stringify(stepProof))
             await this.sendMessage(txHash)
             await this.cacheManager.set(txHash, 0, Number.MAX_SAFE_INTEGER)
             await this.sendToAll({
@@ -127,7 +137,8 @@ import { Server } from 'socket.io';
               ReallocateMemory: {}
             }))
           } else if(a.ret_value[2]['U24'] == 2) {
-            const txHash = await LumosService.buildMessageTx('racer 2 won')
+            const stepProof = await this.cacheManager.get('0xduangua-2')
+            const txHash = await LumosService.buildMessageTx(JSON.stringify(stepProof))
             await this.sendMessage(txHash)
             await this.cacheManager.set(txHash, 0, Number.MAX_SAFE_INTEGER)
             await this.sendToAll({
@@ -139,6 +150,9 @@ import { Server } from 'socket.io';
               ReallocateMemory: {}
             }))
           }
+
+          await this.cacheManager.del('0xduangua-1')
+          await this.cacheManager.del('0xduangua-2')
   
           // TODO: Call ckb to submit if needed
       } catch (error) {
