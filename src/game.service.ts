@@ -125,7 +125,7 @@ import { Server } from 'socket.io';
           if (a.ret_value[2]['U24'] == 1) {
             const stepProof = await this.cacheManager.get('0xduangua-1')
             console.log(stepProof)
-            const txHash = await LumosService.buildMessageTx(JSON.stringify(stepProof))
+            const txHash = await LumosService.buildMessageTx(`racer-1:${JSON.stringify(stepProof)}`)
             await this.sendMessage(txHash)
             await this.cacheManager.set(txHash, 0, Number.MAX_SAFE_INTEGER)
             await this.sendToAll({
@@ -138,7 +138,7 @@ import { Server } from 'socket.io';
             }))
           } else if(a.ret_value[2]['U24'] == 2) {
             const stepProof = await this.cacheManager.get('0xduangua-2')
-            const txHash = await LumosService.buildMessageTx(JSON.stringify(stepProof))
+            const txHash = await LumosService.buildMessageTx(`racer-2:${JSON.stringify(stepProof)}`)
             await this.sendMessage(txHash)
             await this.cacheManager.set(txHash, 0, Number.MAX_SAFE_INTEGER)
             await this.sendToAll({
